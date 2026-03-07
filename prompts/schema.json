@@ -1,0 +1,108 @@
+{
+  "extraction_schema": {
+    "type": "object",
+    "properties": {
+      "reasoning_chain": {
+        "type": "object",
+        "description": "Step-by-step Chain-of-Thought reasoning trace",
+        "properties": {
+          "step1_commodities": {
+            "type": "string"
+          },
+          "step2_geography": {
+            "type": "string"
+          },
+          "step3_event_type": {
+            "type": "string"
+          },
+          "step4_temporal": {
+            "type": "string"
+          },
+          "step5_sentiment": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "step1_commodities",
+          "step2_geography",
+          "step3_event_type",
+          "step4_temporal",
+          "step5_sentiment"
+        ]
+      },
+      "label": {
+        "type": "string",
+        "enum": [
+          "SUPPLYSHOCK",
+          "DEMANDSHOCK",
+          "PRICEREPORT",
+          "IRRELEVANT"
+        ]
+      },
+      "sentiment_score": {
+        "type": "number",
+        "minimum": -1.0,
+        "maximum": 1.0
+      },
+      "confidence": {
+        "type": "number",
+        "minimum": 0.0,
+        "maximum": 1.0
+      },
+      "commodities": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "supply_location": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "is_forward_looking": {
+        "type": "boolean"
+      },
+      "rationale": {
+        "type": "string",
+        "maxLength": 1000
+      }
+    },
+    "required": [
+      "reasoning_chain",
+      "label",
+      "sentiment_score",
+      "confidence",
+      "commodities",
+      "supply_location",
+      "is_forward_looking",
+      "rationale"
+    ]
+  },
+  "typeab_schema": {
+    "type": "object",
+    "properties": {
+      "type_ab": {
+        "type": "string",
+        "enum": [
+          "A",
+          "B"
+        ]
+      },
+      "ab_confidence": {
+        "type": "number",
+        "minimum": 0.0,
+        "maximum": 1.0
+      },
+      "temporal_signal": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "type_ab",
+      "ab_confidence",
+      "temporal_signal"
+    ]
+  }
+}

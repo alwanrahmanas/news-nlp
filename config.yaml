@@ -1,0 +1,218 @@
+# ============================================================
+# GLOBAL CONFIG — NLP/LLM Pipeline v2 (Archive Scraping)
+# Inflasi Pangan Bergejolak Medan
+# ============================================================
+project:
+  name: "nlp_pipeline_v2_inflasi_medan"
+  timezone: "Asia/Jakarta"
+
+corpus:
+  date_start: "2021-01-01"
+  date_end:   "2026-02-28"
+  min_length_chars: 500
+  max_length_chars: 30000
+
+keywords:
+  primary:
+    # Cabai — rantai pasok Karo, sangat volatil
+    - "cabai merah Medan"
+    - "cabai rawit Medan"
+    - "pasokan cabai Karo"
+    - "harga cabai Sumut"
+    # Bawang
+    - "bawang merah Medan"
+    - "bawang putih Medan"
+    - "pasokan bawang Karo"
+    # Hortikultura Karo — BARU, tidak ada di v2
+    - "harga tomat Medan"
+    - "harga kentang Medan"
+    - "pasokan tomat Karo"
+    - "pasokan kentang Karo"
+    # Protein hewani
+    - "harga ayam Medan"
+    - "harga telur Medan"
+    - "daging sapi Medan"      # ← pindah dari secondary!
+    # Beras
+    - "harga beras Medan"
+    - "stok beras Sumut"
+  secondary:
+    - "banjir Karo"
+    - "cuaca Berastagi"
+    - "inflasi pangan Medan"
+    - "inflasi pangan Sumut"
+    - "volatile food Sumatera Utara"
+    - "TPID Medan"
+    - "gagal panen Sumut"
+    - "kelangkaan cabai"
+    - "permintaan Ramadan Medan"
+    - "pasokan bahan pokok Sumut"
+    - "distribusi pangan Sumatera Utara"
+
+  semantic_search:
+    enabled: true
+    model_name: "paraphrase-multilingual-MiniLM-L12-v2"
+    similarity_threshold: 0.45
+
+
+  geo_terms:
+    # Kota/Kabupaten utama Sumatera Utara
+    - "medan"
+    - "karo"
+    - "berastagi"
+    - "pasar induk"
+    - "sumatera utara"
+    - "sumatra utara"
+    - "sumut"
+    - "sumatera"
+    - "sumatra"
+    # Kabupaten sekitar
+    - "deli serdang"
+    - "langkat"
+    - "simalungun"
+    - "tanah karo"
+    - "binjai"
+    - "tebing tinggi"
+    - "pematangsiantar"
+    - "pematang siantar"
+    - "siantar"
+    - "toba"
+    - "tapanuli"
+    - "asahan"
+    - "labuhanbatu"
+    - "sibolga"
+    - "padangsidimpuan"
+    # Pasar utama
+    - "pasar sambu"
+    - "pasar aksara"
+    - "pasar helvetia"
+
+# ── Scraper Configuration ──────────────────────────────────
+scrapers:
+  # Rate limit: seconds between requests to the same domain
+  rate_limit_sec: 3
+  # Max pages to crawl per keyword per source
+  max_pages_per_keyword: 30
+  # Timeout for HTTP requests
+  timeout_sec: 30
+  # Max retries per request
+  max_retries: 3
+  # User agent
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  # Checkpoint interval (save every N articles)
+  checkpoint_interval: 50
+  # Max concurrent threads per domain (mencegah WinError 10060 / connection timeout)
+  # Naikkan ke 3 jika koneksi stabil, turunkan ke 1 jika sering timeout
+  max_concurrent_per_domain: 1
+
+  sources:
+    antaranews:
+      enabled: true
+      name: "Antara News"
+      search_url: "https://www.antaranews.com/search?q={query}&page={page}"
+      article_selector: "article a[href*='/berita/']"
+      base_url: "https://www.antaranews.com"
+      priority: 1
+
+    antaranews_sumut:
+      enabled: true
+      name: "Antara News Sumut"
+      search_url: "https://sumut.antaranews.com/search?q={query}&page={page}"
+      article_selector: "article a[href*='/berita/']"
+      base_url: "https://sumut.antaranews.com"
+      priority: 1
+
+    detik:
+      enabled: true
+      name: "Detik.com"
+      search_url: "https://www.detik.com/search/searchall?query={query}&page={page}"
+      article_selector: "article a, h2 a[href*='detik.com']"
+      base_url: "https://www.detik.com"
+      priority: 2
+
+    detik_sumut:
+      enabled: true
+      name: "Detik Sumut"
+      search_url: "https://www.detik.com/sumut/search/searchall?query={query}&page={page}"
+      article_selector: "article a, h2 a[href*='detik.com']"
+      base_url: "https://www.detik.com"
+      priority: 1
+
+    kompas:
+      enabled: true
+      name: "Kompas.com"
+      search_url: "https://search.kompas.com/search/?q={query}&per=10&sort=date&page={page}"
+      article_selector: "a.article__link"
+      base_url: "https://www.kompas.com"
+      priority: 2
+
+    tribunnews:
+      enabled: true
+      name: "TribunMedan"
+      search_url: "https://www.tribunnews.com/search?q={query}&page={page}"
+      article_selector: "h3 a[href*='tribunnews.com']"
+      base_url: "https://www.tribunnews.com"
+      priority: 3
+
+    waspada:
+      enabled: true
+      name: "Waspada.id"
+      search_url: "https://www.waspada.id/?s={query}&paged={page}"
+      article_selector: "h2.entry-title a, article a"
+      base_url: "https://www.waspada.id"
+      priority: 4
+
+    google_news_rss:
+      enabled: true
+      name: "Google News RSS"
+      search_url: "https://news.google.com/rss/search?q={query}&hl=id&gl=ID&ceid=ID:id"
+      priority: 99  # Lower priority, fallback
+
+llm:
+  model: "gpt-5-mini-2025-08-07"
+  # temperature dihapus: GPT-5-mini lebih stabil tanpa temperature override
+  # gunakan max_completion_tokens (bukan max_tokens) sesuai API GPT-5
+  max_completion_tokens: 8192
+  max_retries: 3
+  retry_delay_sec: 5
+  batch_size: 20
+  cache_enabled: true
+
+labels:
+  valid:
+    - "SUPPLYSHOCK"
+    - "DEMANDSHOCK"
+    - "PRICEREPORT"
+    - "IRRELEVANT"
+  default_fallback: "IRRELEVANT"
+
+quality:
+  low_coverage_threshold: 20
+
+sentiment:
+  score_min: -1.0
+  score_max: 1.0
+  confidence_threshold: 0.60
+
+aggregation:
+  frequency: "biweekly"
+  biweek_anchor: "2021-01-01"
+  decay_lambda: 0.3
+  neutral_impute_value: 0.0
+
+  # ── Coverage Quality Thresholds ───────────────────────────
+  # Minimum artikel RELEVAN (non-IRRELEVANT) per periode bi-weekly
+  # agar periode dianggap terwakili dengan baik.
+  # Periode di bawah threshold ini akan di-flag sebagai low_confidence.
+  min_relevant_articles: 2      # < 2 → low_confidence (strict)
+  sparse_threshold: 4           # < 4 artikel total → "SPARSE"
+  dense_threshold: 15           # >= 15 artikel total → "DENSE"
+
+  # ── Sub-Periode Analisis ──────────────────────────────────
+  # Periode sebelum cutoff dianggap "historical_context" (sparse/bias tinggi)
+  # Periode mulai cutoff dianggap "analysis_period" (dense, cocok training)
+  analysis_period_start: "2024-01-01"   # ubah sesuai hasil EDA Anda
+
+granger:
+  max_lag_periods: 4
+  significance_level: 0.05
+  ic_criterion: "aic"

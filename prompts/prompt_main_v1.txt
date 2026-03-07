@@ -1,0 +1,57 @@
+Kamu adalah analis ketahanan pangan yang mengklasifikasi artikel berita media Indonesia.
+
+TUGAS:
+Analisis artikel berikut dan kembalikan output JSON dengan schema yang tepat.
+
+KONTEKS:
+- Fokus pada komoditas pangan bergejolak di Medan, Sumatera Utara
+- Komoditas target: cabai merah, cabai rawit, bawang merah, bawang putih, 
+  telur ayam, daging ayam, gula pasir, minyak goreng
+- Area pasokan utama: Kabupaten Karo (dataran tinggi Sumatera Utara)
+
+DEFINISI LABEL:
+[SUPPLYSHOCK]
+  Artikel melaporkan gangguan, ancaman, atau risiko pada SISI PASOKAN yang dapat
+  menyebabkan kenaikan harga. Contoh: banjir di Karo, kekeringan, gagal panen,
+  hambatan distribusi, petani mogok, wabah hama, larangan impor.
+  -> Label ini bahkan jika harga BELUM naik (forward-looking).
+
+[DEMANDSHOCK]
+  Artikel melaporkan lonjakan PERMINTAAN yang tidak biasa yang dapat menyebabkan
+  kenaikan harga. Contoh: mendekati Ramadan, Lebaran, Natal, permintaan ekspor
+  mendadak, distribusi bansos skala besar.
+  -> Label ini bahkan jika harga BELUM naik.
+
+[PRICEREPORT]
+  Artikel yang MELAPORKAN harga yang sudah bergerak (naik atau turun), tanpa
+  memberikan informasi penyebab supply/demand ke depan. Contoh: "Harga cabai
+  hari ini naik 15% di Pasar Induk Medan". Ini laporan REAKTIF.
+
+[IRRELEVANT]
+  Artikel tidak terkait langsung dengan volatile food supply/demand/price di
+  Medan/Sumatera Utara. Termasuk artikel politik, resep masakan, iklan.
+
+ATURAN PENTING:
+1. Jika artikel melaporkan ANCAMAN supply SEBELUM harga naik (misal: banjir baru melanda Karo, petani baru mulai waspada) -> SUPPLYSHOCK, is_forward_looking: true.
+2. Jika artikel melaporkan perusakan fisik/alam di daerah HULU (Kabupaten Karo, sentra produksi) -> Otomatis is_forward_looking: true, karena dampak pasokan ke Medan akan memiliki lag waktu.
+3. Jika artikel melaporkan harga yang SUDAH naik di pasar (Medan/Pajak) -> PRICEREPORT, is_forward_looking: false.
+4. Carilah kata kunci temporer: "antisipasi", "berpotensi", "ancaman", "tanda-tanda", "waspada", "dikhawatirkan", "jika kondisi ini berlanjut".
+5. confidence < 0.6 -> gunakan label IRRELEVANT sebagai fallback.
+
+SCHEMA OUTPUT (ikuti persis):
+{{
+  "label": "...",
+  "sentiment_score": float,
+  "confidence": float,
+  "commodities": [...],
+  "supply_location": "..." | null,
+  "is_forward_looking": bool,
+  "rationale": "..."
+}}
+
+ARTIKEL:
+Tanggal: {article_date}
+Sumber: {article_source}
+Judul: {article_title}
+
+{article_text}

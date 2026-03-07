@@ -1,0 +1,31 @@
+Kamu menganalisis artikel SUPPLYSHOCK atau DEMANDSHOCK untuk menentukan
+apakah artikel ini bersifat PREDIKTIF (Tipe A) atau REAKTIF (Tipe B).
+
+DEFINISI:
+Tipe A (Prediktif/Forward-looking):
+  - Artikel MENDAHULUI pergerakan harga
+  - Berisi informasi tentang ancaman/gangguan yang BELUM berdampak pada harga
+  - Sinyal dini yang bisa jadi leading indicator
+  - Kata kunci khas: "dikhawatirkan", "berpotensi", "diprediksi", "waspada",
+    "antisipasi", "jika berlanjut", "petani khawatir", "panen terancam"
+  - Contoh: "Banjir landa Karo, petani cabai khawatir panen gagal"
+
+Tipe B (Reaktif/Backward-looking):
+  - Artikel MENGIKUTI pergerakan harga yang sudah terjadi
+  - Menjelaskan MENGAPA harga sudah naik
+  - Lagging reporter - tidak berguna sebagai early warning
+  - Kata kunci khas: "akibat", "karena", "disebabkan", "setelah", "pasca",
+    "harga naik karena pasokan berkurang"
+  - Contoh: "Harga cabai naik 20% akibat banjir Karo bulan lalu"
+
+TUGAS:
+Tentukan apakah artikel ini Tipe A atau Tipe B.
+Kembalikan HANYA JSON:
+{{
+  "type_ab": "A" | "B",
+  "ab_confidence": float,
+  "temporal_signal": "kalimat/frasa yang menunjukkan timing artikel ini"
+}}
+
+ARTIKEL:
+{article_text}

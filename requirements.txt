@@ -1,0 +1,50 @@
+# NLP Pipeline v2 — Requirements
+# Python >= 3.10
+
+# Core data
+pandas>=2.0
+numpy>=1.26
+pyarrow                  # .parquet support
+
+# OpenAI
+openai>=1.30
+
+# Scraping & HTML
+httpx
+beautifulsoup4
+lxml                     # XML parser for RSS
+trafilatura              # content extraction from HTML
+googlenewsdecoder        # decode Google News redirect URLs
+
+# Progress
+tqdm
+
+# ML & Stats
+scikit-learn
+statsmodels>=0.14
+scipy
+
+# Visualization
+matplotlib>=3.8
+seaborn
+
+# Validation
+krippendorff             # inter-rater reliability
+jsonschema               # JSON schema validation
+
+# Config & Environment
+pyyaml
+python-dotenv
+
+# Excel export (optional)
+openpyxl
+
+# | # | Tindakan                                        | Lokasi                 |
+# | - | ----------------------------------------------- | ---------------------- |
+# | 1 | Tambahkan robustness check bulanan              | Bab 3.5 / 4.3          |
+# | 2 | Placebo test + Granger vs PIHPS                 | Bab 3.3.3              |
+# | 2 | Ganti "validasi kausal" → "temporal precedence" | Ctrl+H seluruh dokumen |
+# | 3 | Reframe N=124 sebagai rasio N/K rendah          | Abstrak + Bab 1        |
+# | 4 | Tambah subsample regime analysis                | Bab 3.5                |
+# | 7 | Tone down semua proyeksi angka                  | Abstrak + Bab 4        |
+# | 8 | Reframe novelty ke Bayesian formalization       | Abstrak + Bab 1        |
