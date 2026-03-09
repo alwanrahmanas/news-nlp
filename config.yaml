@@ -10,7 +10,7 @@ corpus:
   date_start: "2021-01-01"
   date_end:   "2026-02-28"
   min_length_chars: 500
-  max_length_chars: 30000
+  max_length_chars: 100000
 
 keywords:
   primary:
