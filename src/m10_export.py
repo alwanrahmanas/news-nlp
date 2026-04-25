@@ -19,6 +19,7 @@ Format final (~120 baris x kolom untuk BSTS model):
 Ref: Metodologi §10 (Matriks X_t) dan §9.1 (dummy coverage)
 """
 
+import json
 import logging
 from pathlib import Path
 

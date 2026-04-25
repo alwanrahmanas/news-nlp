@@ -23,7 +23,7 @@ tqdm
 scikit-learn
 statsmodels>=0.14
 scipy
-
+krippendorff
 # Visualization
 matplotlib>=3.8
 seaborn

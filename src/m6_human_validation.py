@@ -77,7 +77,7 @@ def export_for_annotation(sample_df: pd.DataFrame) -> Path:
 
     # Truncate full_text to 800 chars for readability
     if "full_text" in sample_df.columns:
-        annotation_df["full_text"] = sample_df["full_text"].str[:800]
+        annotation_df["full_text"] = sample_df["full_text"].str[:10000]
 
     # Add GPT prediction (hidden column for later comparison)
     annotation_df["gpt_label"] = sample_df["label"]
@@ -140,16 +140,15 @@ def export_for_annotation(sample_df: pd.DataFrame) -> Path:
 def compute_inter_rater_reliability(annotations_dir: Path = None) -> dict:
     """
     Compute Krippendorff's alpha and Cohen's kappa pairwise.
-    Expects: annotations_rater1.csv, annotations_rater2.csv, annotations_rater3.csv
-    in data/validation/
+    Expects: [1] sample_200_for_annotation.xlsx, [2] sample_200_for_annotation.xlsx
+    in data/validation/hasil labeling/
     """
     if annotations_dir is None:
-        annotations_dir = ROOT_DIR / "data" / "validation"
+        annotations_dir = ROOT_DIR / "data" / "validation" / "hasil labeling"
 
     rater_files = [
-        annotations_dir / "annotations_rater1.csv",
-        annotations_dir / "annotations_rater2.csv",
-        annotations_dir / "annotations_rater3.csv",
+        annotations_dir / "[1] sample_200_for_annotation.xlsx",
+        annotations_dir / "[2] sample_200_for_annotation.xlsx",
     ]
 
     # Check if annotation files exist
@@ -164,7 +163,11 @@ def compute_inter_rater_reliability(annotations_dir: Path = None) -> dict:
     # Load annotations
     raters = []
     for f in existing_files:
-        df = pd.read_csv(f)
+        if f.suffix == ".xlsx":
+            df = pd.read_excel(f, sheet_name="Annotation")
+        else:
+            df = pd.read_csv(f)
+            
         if "human_label" not in df.columns:
             logger.error(f"Column 'human_label' not found in {f}")
             continue
@@ -207,8 +210,11 @@ def compute_inter_rater_reliability(annotations_dir: Path = None) -> dict:
     for i in range(len(rater_cols)):
         for j in range(i + 1, len(rater_cols)):
             key = f"{rater_cols[i]}_vs_{rater_cols[j]}"
-            labels_i = merged[rater_cols[i]].values
-            labels_j = merged[rater_cols[j]].values
+            valid_idx = merged[rater_cols[i]].notna() & merged[rater_cols[j]].notna()
+            labels_i = merged.loc[valid_idx, rater_cols[i]].astype(str).values
+            labels_j = merged.loc[valid_idx, rater_cols[j]].astype(str).values
+            if len(labels_i) == 0:
+                continue
             kappa = cohen_kappa_score(labels_i, labels_j)
             kappa_results[key] = round(kappa, 4)
 
@@ -237,12 +243,11 @@ def compute_gpt_vs_human(sample_df: pd.DataFrame, annotations_dir: Path = None) 
     Target: macro-F1 >= 0.75
     """
     if annotations_dir is None:
-        annotations_dir = ROOT_DIR / "data" / "validation"
+        annotations_dir = ROOT_DIR / "data" / "validation" / "hasil labeling"
 
     rater_files = [
-        annotations_dir / "annotations_rater1.csv",
-        annotations_dir / "annotations_rater2.csv",
-        annotations_dir / "annotations_rater3.csv",
+        annotations_dir / "[1] sample_200_for_annotation.xlsx",
+        annotations_dir / "[2] sample_200_for_annotation.xlsx",
     ]
 
     existing_files = [f for f in rater_files if f.exists()]
@@ -251,7 +256,12 @@ def compute_gpt_vs_human(sample_df: pd.DataFrame, annotations_dir: Path = None) 
         return {"status": "pending_annotations"}
 
     # Load and align
-    raters = [pd.read_csv(f) for f in existing_files]
+    raters = []
+    for f in existing_files:
+        if f.suffix == ".xlsx":
+            raters.append(pd.read_excel(f, sheet_name="Annotation"))
+        else:
+            raters.append(pd.read_csv(f))
     labels_matrix = pd.DataFrame({"article_id": raters[0]["article_id"]})
     for i, r in enumerate(raters):
         labels_matrix[f"rater{i+1}"] = r["human_label"]
@@ -279,8 +289,8 @@ def compute_gpt_vs_human(sample_df: pd.DataFrame, annotations_dir: Path = None) 
     # Compute metrics
     from sklearn.metrics import f1_score, confusion_matrix, classification_report
 
-    y_true = merged["human_consensus"].values
-    y_pred = merged["gpt_label"].values
+    y_true = merged["human_consensus"].fillna("IRRELEVANT").astype(str).values
+    y_pred = merged["gpt_label"].fillna("IRRELEVANT").astype(str).values
 
     labels_list = ["SUPPLYSHOCK", "DEMANDSHOCK", "PRICEREPORT", "IRRELEVANT"]
 
@@ -330,10 +340,15 @@ def run_human_validation(cfg: dict = None) -> None:
     df = pd.read_parquet(input_path)
     logger.info(f"Loaded {len(df)} articles from extractions_clean.parquet")
 
-    # Phase 1: Create sample and export
-    sample = create_validation_sample(df, n=200)
-    if not sample.empty:
-        export_for_annotation(sample)
+    # Phase 1: Create sample and export (skip if already exists)
+    jsonl_path = ROOT_DIR / "data" / "validation" / "sample_200.jsonl"
+    if jsonl_path.exists():
+        sample = pd.read_json(jsonl_path, lines=True)
+        logger.info(f"Loaded existing validation sample from {jsonl_path}")
+    else:
+        sample = create_validation_sample(df, n=200)
+        if not sample.empty:
+            export_for_annotation(sample)
 
     # Phase 2: Compute metrics (if annotations exist)
     irr_results = compute_inter_rater_reliability()

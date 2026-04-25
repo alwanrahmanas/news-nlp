@@ -51,7 +51,7 @@ keywords:
   semantic_search:
     enabled: true
     model_name: "paraphrase-multilingual-MiniLM-L12-v2"
-    similarity_threshold: 0.45
+    similarity_threshold: 0.40
 
 
   geo_terms:
@@ -168,10 +168,11 @@ scrapers:
       priority: 99  # Lower priority, fallback
 
 llm:
-  model: "gpt-5-mini-2025-08-07"
+  provider: "openai" # "openai" atau "gemini"
+  model: "gpt-5.4-mini-2026-03-17"
   # temperature dihapus: GPT-5-mini lebih stabil tanpa temperature override
   # gunakan max_completion_tokens (bukan max_tokens) sesuai API GPT-5
-  max_completion_tokens: 8192
+  max_completion_tokens: 10000
   max_retries: 3
   retry_delay_sec: 5
   batch_size: 20
