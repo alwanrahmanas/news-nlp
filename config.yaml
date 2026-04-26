@@ -175,7 +175,7 @@ llm:
   max_completion_tokens: 10000
   max_retries: 5
   retry_delay_sec: 10
-  max_concurrent: 5
+  max_concurrent: 3
   batch_size: 20
   cache_enabled: true
 

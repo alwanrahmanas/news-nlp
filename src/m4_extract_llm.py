@@ -138,7 +138,18 @@ async def extract_single_article_async(
                 elif isinstance(parsed, list):
                     parsed = {}
 
-                # Schema validation + auto-fill (sama seperti sebelumnya)
+                # ── Fix: LLM sometimes nests all fields inside reasoning_chain ──
+                # Promote top-level fields that were misplaced inside reasoning_chain
+                top_level_keys = ["label", "sentiment_score", "confidence",
+                                  "commodities", "supply_location",
+                                  "is_forward_looking", "rationale"]
+                rc = parsed.get("reasoning_chain", {})
+                if isinstance(rc, dict):
+                    for key in top_level_keys:
+                        if key not in parsed and key in rc:
+                            parsed[key] = rc.pop(key)
+
+                # Schema validation + auto-fill
                 try:
                     validate_extraction_schema(parsed)
                 except Exception as e:
@@ -179,6 +190,9 @@ async def extract_single_article_async(
                     if flush_counter[0] >= cfg["llm"]["batch_size"]:
                         flush_cache(cache, cfg)
                         flush_counter[0] = 0
+
+                # Throttle: small delay between requests to stay under TPM
+                await asyncio.sleep(1.0)
 
                 return result
 
@@ -266,7 +280,7 @@ async def run_extraction_pipeline_async(
 
     # ── Kunci: Semaphore kontrol concurrency ─────────────────
     # max_concurrent = 20 adalah titik aman untuk tier standar OpenAI/Gemini
-    max_concurrent = cfg["llm"].get("max_concurrent", 20)
+    max_concurrent = cfg["llm"].get("max_concurrent", 3)
     semaphore = asyncio.Semaphore(max_concurrent)
     cache_lock = asyncio.Lock()
     flush_counter = [0]
