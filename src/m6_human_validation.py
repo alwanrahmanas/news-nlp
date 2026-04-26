@@ -88,26 +88,58 @@ def export_for_annotation(sample_df: pd.DataFrame) -> Path:
     annotation_df["human_sentiment_score"] = ""
     annotation_df["human_notes"] = ""
 
-    # Cheat sheet
+    # Cheat sheet — Panduan Pelabelan (kerangka kausalitas ekonomi makro)
     cheat_sheet = pd.DataFrame({
-        "Label": ["SUPPLYSHOCK", "DEMANDSHOCK", "PRICEREPORT", "IRRELEVANT"],
-        "Definisi": [
-            "Gangguan/ancaman PASOKAN yang bisa naikkan harga. Banjir, kekeringan, gagal panen, hambatan distribusi.",
-            "Lonjakan PERMINTAAN tidak biasa. Ramadan, Lebaran, Natal, ekspor mendadak.",
-            "Laporan harga REAKTIF (sudah naik/turun), tanpa info supply/demand ke depan.",
-            "Tidak terkait volatile food supply/demand/price di Medan/Sumut."
+        "Label": [
+            "IRRELEVANT", "IRRELEVANT", "IRRELEVANT", "IRRELEVANT",
+            "PRICEREPORT", "PRICEREPORT", "PRICEREPORT",
+            "SUPPLYSHOCK", "SUPPLYSHOCK", "SUPPLYSHOCK",
+            "DEMANDSHOCK", "DEMANDSHOCK", "DEMANDSHOCK",
+            "TIE-BREAKER",
         ],
-        "Contoh": [
-            "Banjir landa Karo, petani cabai khawatir panen gagal",
-            "Menjelang Ramadan, permintaan daging ayam naik tajam",
-            "Harga cabai hari ini naik 15% di Pasar Induk Medan",
-            "Gubernur Sumut resmikan jembatan baru di Karo"
+        "Sub_Kriteria": [
+            "Kebocoran Spasial",
+            "Distorsi Harga Intervensi",
+            "Retorika Politik / Regulasi Normatif",
+            "Penyebutan Non-Kausal",
+            "Laporan Harga Murni",
+            "Rilis Statistik Resmi",
+            "Evaluasi Stok Pasif",
+            "Disrupsi Produksi & Logistik",
+            "Momentum Produksi Mayor",
+            "Injeksi Volume Intervensi",
+            "Bukti Penarikan Volume Tiba-Tiba",
+            "Kejutan Permintaan Struktural",
+            "Siklus Kalender Eksplisit",
+            "SUPPLYSHOCK > PRICEREPORT",
+        ],
+        "Penjelasan": [
+            "Kejadian/harga/gangguan logistik di LUAR Prov. Sumatera Utara.",
+            "Harga subsidi, diskon ritel modern, operasi pasar murah — bukan ekuilibrium organik.",
+            "Imbauan/rencana pejabat tanpa tindakan fisik atau data volume riil.",
+            "Komoditas disebut tapi dalam konteks resep, restoran, pakan hewan, kurban individu.",
+            "Hanya menyatakan harga naik/turun/stabil TANPA penjelasan kausalitas fisik.",
+            "Publikasi IHK/NTP dari otoritas statistik — rekapitulasi historis.",
+            "Pernyataan 'aman'/'terkendali' TANPA injeksi pasokan baru berskala masif.",
+            "Gagal panen, hama, cuaca ekstrem, infrastruktur putus, pungutan liar logistik.",
+            "Musim panen raya yang mengubah ekspektasi volume pasokan lokal secara drastis.",
+            "Penyaluran CBP/SPHP Bulog ribuan ton — fokus pada penambahan fisik barang, BUKAN harga subsidi.",
+            "WAJIB ada bukti perilaku konsumen menguras stok (borong warga, pembelian massal). Narasi 'harga naik akibat Ramadhan' saja TIDAK cukup.",
+            "Program institusional besar (contoh: Makan Bergizi Gratis) menciptakan serapan agregat baru.",
+            "Teks secara langsung menyebut kelangkaan/kenaikan pesanan di produsen dipicu hari besar keagamaan.",
+            "Jika teks memuat laporan harga TETAPI juga menyebut jembatan putus/panen raya → label SUPPLYSHOCK. Variabel kausalitas > angka harga reaktif.",
         ],
         "Sentiment_Score_Guide": [
-            "-1.0 (parah) s.d. -0.3 (ringan). Negatif = ancaman kenaikan harga",
-            "-0.8 (lonjakan besar) s.d. -0.3 (peningkatan moderat)",
-            "-1.0 (naik drastis) s.d. +1.0 (turun drastis). Refleksi pergerakan aktual",
-            "0.0 (netral)"
+            "0.0 (netral)", "0.0", "0.0", "0.0",
+            "-1.0 (naik drastis) s.d. +1.0 (turun drastis)",
+            "-1.0 s.d. +1.0", "-1.0 s.d. +1.0",
+            "-1.0 (parah) s.d. -0.3 (ringan)",
+            "+0.3 s.d. +1.0 (surplus positif)",
+            "-0.5 s.d. +0.5",
+            "-0.8 (lonjakan besar) s.d. -0.3 (moderat)",
+            "-0.8 s.d. -0.3",
+            "-0.6 s.d. -0.3",
+            "(ikuti label yang dipilih)",
         ],
     })
 

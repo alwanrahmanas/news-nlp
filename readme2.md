@@ -1,9 +1,9 @@
 # 🗞️ NLP/LLM Pipeline v2 — Inflasi Pangan Bergejolak Medan
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
-![LLM](https://img.shields.io/badge/LLM-GPT--5.4--mini-green?logo=openai)
-![License](https://img.shields.io/badge/License-Academic-lightgrey)
-![Status](https://img.shields.io/badge/Status-Active-brightgreen)
+[
+[
+[
+[
 
 > **Komponen NLP** dari sistem *Multimodal Bayesian Early Warning for Volatile Food Inflation* (Medan, Sumatera Utara). Pipeline ini mengekstraksi sinyal sentimen berita dari arsip media daring Indonesia (2021–2026) sebagai salah satu modalitas dalam kerangka **Bayesian Structural Time Series (BSTS) triple-modal**.
 
@@ -21,7 +21,6 @@
 - [Menjalankan Pipeline](#menjalankan-pipeline)
 - [Output & Artefak](#output--artefak)
 - [Status Validasi](#status-validasi)
-- [Panduan Pelabelan](#panduan-pelabelan)
 - [Troubleshooting](#troubleshooting)
 - [Referensi](#referensi)
 
@@ -258,8 +257,8 @@ ps aux | grep run_pipeline
 Pipeline akan **otomatis berhenti** setelah M5 selesai dan menunggu anotasi manusia. Proses anotasi:
 
 1. Buka file `data/validation/sample_200.jsonl`
-2. Anotasi 200 artikel secara independen oleh ≥2 anotator
-3. Simpan hasil ke `data/validation/hasil labeling/`
+2. Anotasi 200 artikel secara independen oleh ≥3 anotator
+3. Simpan hasil ke format yang diharapkan
 4. Jalankan ulang pipeline dari M6:
 
 ```bash
@@ -365,49 +364,6 @@ Hasil terkini dari run terakhir (2026-04-26):
 
 ***
 
-## Panduan Pelabelan
-
-Rancangan aturan pelabelan menggunakan kerangka kausalitas ekonomi makro untuk memisahkan pergeseran kurva penawaran, kurva permintaan, evaluasi statistik, dan distorsi data.
-
-### 1. Kategori `IRRELEVANT` — Filter Kebisingan dan Distorsi
-
-Kategori ini adalah garis pertahanan pertama. Sebuah teks wajib dilabeli `IRRELEVANT` jika memenuhi minimal satu dari kondisi berikut:
-
-- **Kebocoran Spasial**: Kejadian, harga, atau gangguan logistik berlokasi di luar Provinsi Sumatera Utara. Data dari wilayah lain berisiko merusak pemetaan rantai pasok lokal.
-- **Distorsi Harga Intervensi**: Informasi utama memuat harga subsidi, diskon ritel modern, atau operasi pasar murah. Angka ini tidak mencerminkan ekuilibrium pasar organik dan akan memicu prediksi deflasi palsu pada model.
-- **Retorika Politik dan Regulasi Normatif**: Pernyataan pejabat mengenai imbauan, rencana, atau fokus pengendalian inflasi yang tidak disertai tindakan fisik atau data volume riil di lapangan.
-- **Penyebutan Non-Kausal**: Teks memuat nama komoditas pangan bergejolak namun dalam konteks resep masakan, ulasan restoran, pakan hewan peliharaan, atau kurban individu.
-
-### 2. Kategori `PRICEREPORT` — Evaluasi Retrospektif dan Reaktif
-
-Label ini digunakan khusus untuk teks yang memotret kondisi yang sudah terjadi, tanpa menyajikan variabel prediktif (indikator awal) untuk masa depan.
-
-- **Laporan Harga Murni**: Teks hanya menyatakan harga komoditas naik, turun, atau stabil pada titik waktu tertentu tanpa penjelasan kausalitas fisik yang mendasari pergerakan tersebut.
-- **Rilis Statistik Resmi**: Publikasi Indeks Harga Konsumen (IHK) atau Nilai Tukar Petani (NTP) dari otoritas statistik. Ini adalah rekapitulasi data historis bulan sebelumnya.
-- **Evaluasi Stok Pasif**: Pernyataan birokrasi bahwa ketersediaan barang "aman" atau "terkendali" tanpa adanya injeksi volume pasokan baru berskala masif ke dalam pasar.
-
-### 3. Kategori `SUPPLYSHOCK` — Pergeseran Kurva Penawaran
-
-Label ini mengidentifikasi gangguan atau injeksi pada sisi ketersediaan fisik barang. Teks harus secara eksplisit memuat variabel fundamental yang mengubah volume komoditas:
-
-- **Disrupsi Produksi dan Logistik**: Gagal panen, penyakit hama, cuaca ekstrem, infrastruktur distribusi terputus, pungutan liar logistik, atau penjarahan fasilitas penyimpanan.
-- **Momentum Produksi Mayor**: Datangnya musim panen raya yang mengubah ekspektasi volume pasokan lokal secara drastis.
-- **Injeksi Volume Intervensi**: Penyaluran Cadangan Beras Pemerintah (CBP) atau program Stabilisasi Pasokan dan Harga Pangan (SPHP) oleh Bulog dalam skala ribuan ton. Fokusnya adalah pada penambahan ketersediaan barang secara fisik di pasar, bukan pada harga jual subsidi.
-
-### 4. Kategori `DEMANDSHOCK` — Pergeseran Kurva Permintaan
-
-Aturan untuk kategori ini memerlukan pembuktian kausalitas yang sangat ketat untuk menghindari kerancuan dengan `PRICEREPORT`.
-
-- **Bukti Penarikan Volume Tiba-Tiba**: Tidak dibenarkan melabeli teks sebagai `DEMANDSHOCK` hanya karena narasi "harga naik akibat Ramadhan". Teks wajib menyajikan informasi utama berupa perilaku konsumen yang menguras stok pasar. Contoh valid: "stok distributor menipis karena aksi borong warga" atau "pembelian massal oleh entitas politik".
-- **Kejutan Permintaan Struktural**: Adanya program institusional berskala besar (seperti Makan Bergizi Gratis) yang menciptakan serapan agregat baru secara mendadak di luar pola konsumsi organik masyarakat.
-- **Siklus Kalender Eksplisit**: Hanya berlaku jika teks secara langsung menyatakan bahwa kelangkaan atau kenaikan pesanan di tingkat produsen dipicu oleh persiapan menjelang hari besar keagamaan.
-
-### Aturan Penengah (*Tie-Breaker Rule*)
-
-Jika sebuah teks memuat laporan harga (`PRICEREPORT`) namun menyertakan informasi utama mengenai jembatan putus atau panen raya, maka label `SUPPLYSHOCK` wajib diprioritaskan. Variabel kausalitas selalu memiliki hierarki informasi yang lebih tinggi dibandingkan dengan sekadar angka harga reaktif, karena variabel tersebut menyediakan daya prediktif bagi model Bayesian Structural Time Series.
-
-***
-
 ## Troubleshooting
 
 **Scraping terlalu lambat atau sering timeout**
@@ -424,9 +380,10 @@ Periksa saldo OpenAI API. Kurangi `batch_size` di `config.yaml` atau gunakan mod
 
 **M7: Tipe A terlalu sedikit (< 20%)**
 Aktifkan LLM untuk klasifikasi kasus ambiguous:
-```python
-# src/m7_typeAB.py — ubah use_llm=True
-df = run_typeAB_classification(cfg, use_llm=True)
+```yaml
+# config.yaml
+type_ab:
+  use_llm_for_ambiguous: true   # Default: false
 ```
 
 **M9: inflasi NON-STATIONARY**
@@ -445,7 +402,7 @@ python run_pipeline.py --only m1
 Penelitian ini merupakan bagian dari:
 
 > **"A Multimodal Bayesian Framework for Early Warning of Volatile Food Inflation: Integrating Satellite Rainfall, LLM-Extracted News Sentiment, and High-Frequency Prices in Small-Sample Settings"**
-> Universitas Sumatera Utara, 2026.
+> Universitas Sumatera Utara / [Institusi], 2026.
 
 Metodologi NLP mengadaptasi kerangka dekomposisi sentimen dari:
 - Kwon et al. (2025) — *LLM-based macroeconomic sentiment decomposition*
@@ -453,7 +410,52 @@ Metodologi NLP mengadaptasi kerangka dekomposisi sentimen dari:
 - Granger (1969) — *Testing for causality*
 
 ***
+***
+Tambahan penjelasan mengenai pelabelan (berikan di C:\Users\US3R\OneDrive\Dokumen\data-science\Project\sumateranomics\nlp\nlp_pipeline_v2\data\validation\sample_200_for_annotation.xlsx)
 
+Berikut adalah rancangan aturan pelabelan yang menggunakan kerangka kausalitas ekonomi makro untuk memisahkan pergeseran kurva penawaran, kurva permintaan, evaluasi statistik, dan distorsi data.
+
+1. Kategori IRRELEVANT (Filter Kebisingan dan Distorsi)
+Kategori ini adalah garis pertahanan pertama. Sebuah teks wajib dilabeli IRRELEVANT jika memenuhi minimal satu dari kondisi berikut:
+
+Kebocoran Spasial: Kejadian, harga, atau gangguan logistik berlokasi di luar Provinsi Sumatera Utara. Data dari wilayah lain berisiko merusak pemetaan rantai pasok lokal.
+
+Distorsi Harga Intervensi: Informasi utama memuat harga subsidi, diskon ritel modern, atau operasi pasar murah. Angka ini tidak mencerminkan ekuilibrium pasar organik dan akan memicu prediksi deflasi palsu pada model.
+
+Retorika Politik dan Regulasi Normatif: Pernyataan pejabat mengenai imbauan, rencana, atau fokus pengendalian inflasi yang tidak disertai tindakan fisik atau data volume riil di lapangan.
+
+Penyebutan Non Kausal: Teks memuat nama komoditas pangan bergejolak namun dalam konteks resep masakan, ulasan restoran, pakan hewan peliharaan, atau kurban individu.
+
+2. Kategori PRICEREPORT (Evaluasi Retrospektif dan Reaktif)
+Label ini digunakan khusus untuk teks yang memotret kondisi yang sudah terjadi, tanpa menyajikan variabel prediktif (indikator awal) untuk masa depan.
+
+Laporan Harga Murni: Teks hanya menyatakan harga komoditas naik, turun, atau stabil pada titik waktu tertentu tanpa penjelasan kausalitas fisik yang mendasari pergerakan tersebut.
+
+Rilis Statistik Resmi: Publikasi Indeks Harga Konsumen (IHK) atau Nilai Tukar Petani (NTP) dari otoritas statistik. Ini adalah rekapitulasi data historis bulan sebelumnya.
+
+Evaluasi Stok Pasif: Pernyataan birokrasi bahwa ketersediaan barang "aman" atau "terkendali" tanpa adanya injeksi volume pasokan baru berskala masif ke dalam pasar.
+
+3. Kategori SUPPLYSHOCK (Pergeseran Kurva Penawaran)
+Label ini mengidentifikasi gangguan atau injeksi pada sisi ketersediaan fisik barang. Teks harus secara eksplisit memuat variabel fundamental yang mengubah volume komoditas:
+
+Disrupsi Produksi dan Logistik: Gagal panen, penyakit hama, cuaca ekstrem, infrastruktur distribusi terputus, pungutan liar logistik, atau penjarahan fasilitas penyimpanan.
+
+Momentum Produksi Mayor: Datangnya musim panen raya yang mengubah ekspektasi volume pasokan lokal secara drastis.
+
+Injeksi Volume Intervensi: Penyaluran Cadangan Beras Pemerintah (CBP) atau program Stabilisasi Pasokan dan Harga Pangan (SPHP) oleh Bulog dalam skala ribuan ton. Fokusnya adalah pada penambahan ketersediaan barang secara fisik di pasar, bukan pada harga jual subsidi.
+
+4. Kategori DEMANDSHOCK (Pergeseran Kurva Permintaan)
+Aturan untuk kategori ini memerlukan pembuktian kausalitas yang sangat ketat untuk menghindari kerancuan dengan PRICEREPORT.
+
+Bukti Penarikan Volume Tiba Tiba: Tidak dibenarkan melabeli teks sebagai DEMANDSHOCK hanya karena narasi "harga naik akibat Ramadhan". Teks wajib menyajikan informasi utama berupa perilaku konsumen yang menguras stok pasar. Contoh valid: "stok distributor menipis karena aksi borong warga" atau "pembelian massal oleh entitas politik".
+
+Kejutan Permintaan Struktural: Adanya program institusional berskala besar (seperti Makan Bergizi Gratis) yang menciptakan serapan agregat baru secara mendadak di luar pola konsumsi organik masyarakat.
+
+Siklus Kalender Eksplisit: Hanya berlaku jika teks secara langsung menyatakan bahwa kelangkaan atau kenaikan pesanan di tingkat produsen dipicu oleh persiapan menjelang hari besar keagamaan.
+
+Aturan Penengah (Tie Breaker Rule)
+Jika sebuah teks memuat laporan harga (PRICEREPORT) namun menyertakan informasi utama mengenai jembatan putus atau panen raya, maka label SUPPLYSHOCK wajib diprioritaskan. Variabel kausalitas selalu memiliki hierarki informasi yang lebih tinggi dibandingkan dengan sekadar angka harga reaktif, karena variabel tersebut menyediakan daya prediktif bagi model Bayesian Structural Time Series.
+***
 <p align="center">
   <sub>Dibuat untuk keperluan riset akademik. Data berita digunakan sesuai ketentuan fair use.</sub>
 </p>

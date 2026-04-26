@@ -280,5 +280,5 @@ def run_typeAB_classification(cfg: dict = None, use_llm: bool = True) -> pd.Data
 
 if __name__ == "__main__":
     cfg, log = get_cfg_and_logger(skip_env=True)
-    df = run_typeAB_classification(cfg, use_llm=False)
+    df = run_typeAB_classification(cfg, use_llm=True)
     logger.info("M7 Type A/B decomposition complete.")
