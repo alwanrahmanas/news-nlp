@@ -98,22 +98,55 @@ CONTOH 4 — IRRELEVANT:
   → Rationale: "Artikel resep masakan, bukan berita supply/demand/harga."
 
 ═══════════════════════════════════════════════
-ATURAN KEPUTUSAN (Decision Rules)
+ATURAN KEPUTUSAN (Decision Rules — Kerangka Kausalitas Ekonomi Makro)
 ═══════════════════════════════════════════════
 
-PRIORITAS LABEL (jika ambigu):
-  1. Jika ada faktor supply-side yang jelas → SUPPLYSHOCK
-  2. Jika ada faktor demand-side yang jelas → DEMANDSHOCK
-  3. Jika HANYA melaporkan harga tanpa supply/demand angle → PRICEREPORT
-  4. Jika tidak relevan → IRRELEVANT
+KATEGORI IRRELEVANT — Filter Kebisingan dan Distorsi:
+  Labeli IRRELEVANT jika memenuhi MINIMAL SATU kondisi berikut:
+  • Kebocoran Spasial: kejadian/harga/gangguan logistik di LUAR Prov. Sumatera Utara.
+  • Distorsi Harga Intervensi: harga subsidi, diskon ritel modern, operasi pasar murah
+    — angka ini tidak mencerminkan ekuilibrium pasar organik.
+  • Retorika Politik / Regulasi Normatif: imbauan/rencana pejabat tanpa tindakan fisik
+    atau data volume riil di lapangan.
+  • Penyebutan Non-Kausal: komoditas disebut dalam konteks resep, restoran, pakan hewan,
+    kurban individu.
+
+KATEGORI PRICEREPORT — Evaluasi Retrospektif dan Reaktif:
+  Gunakan untuk teks yang memotret kondisi SUDAH TERJADI tanpa variabel prediktif:
+  • Laporan Harga Murni: hanya menyatakan harga naik/turun/stabil tanpa kausalitas fisik.
+  • Rilis Statistik Resmi: publikasi IHK/NTP dari otoritas statistik (rekapitulasi historis).
+  • Evaluasi Stok Pasif: pernyataan "aman"/"terkendali" tanpa injeksi pasokan baru masif.
+
+KATEGORI SUPPLYSHOCK — Pergeseran Kurva Penawaran:
+  Teks HARUS secara eksplisit memuat variabel fundamental yang mengubah volume komoditas:
+  • Disrupsi Produksi & Logistik: gagal panen, hama, cuaca ekstrem, infrastruktur putus,
+    pungutan liar logistik, penjarahan fasilitas penyimpanan.
+  • Momentum Produksi Mayor: musim panen raya yang mengubah ekspektasi volume pasokan.
+  • Injeksi Volume Intervensi: CBP/SPHP Bulog ribuan ton — fokus pada penambahan fisik
+    barang di pasar, BUKAN pada harga jual subsidi.
+
+KATEGORI DEMANDSHOCK — Pergeseran Kurva Permintaan (KETAT):
+  Pembuktian kausalitas harus SANGAT ketat — hindari kerancuan dengan PRICEREPORT:
+  • Bukti Penarikan Volume Tiba-Tiba: WAJIB ada bukti perilaku konsumen menguras stok.
+    "Harga naik akibat Ramadhan" SAJA tidak cukup. Contoh valid: "stok distributor menipis
+    karena aksi borong warga", "pembelian massal oleh entitas politik".
+  • Kejutan Permintaan Struktural: program institusional besar (contoh: Makan Bergizi Gratis)
+    yang menciptakan serapan agregat baru di luar pola konsumsi organik.
+  • Siklus Kalender Eksplisit: hanya jika teks secara langsung menyatakan kelangkaan/kenaikan
+    pesanan di tingkat produsen dipicu persiapan hari besar keagamaan.
+
+TIE-BREAKER RULE:
+  Jika teks memuat laporan harga (PRICEREPORT) TETAPI juga menyertakan informasi utama
+  mengenai jembatan putus, panen raya, atau gangguan rantai pasok lainnya:
+  → SUPPLYSHOCK wajib diprioritaskan.
+  Variabel kausalitas selalu memiliki hierarki informasi lebih tinggi dibanding angka harga
+  reaktif, karena menyediakan daya prediktif bagi model BSTS.
 
 HARD RULES:
   • SUPPLYSHOCK & DEMANDSHOCK → is_forward_looking HARUS true
     (karena fokus pada sinyal prediktif, bukan laporan reaktif)
   • PRICEREPORT → is_forward_looking HARUS false
   • confidence < 0.5 → pertimbangkan IRRELEVANT sebagai fallback
-  • Artikel yang membahas KEBIJAKAN HARGA (HET, operasi pasar stabilisasi)
-    terkait komoditas volatile → SUPPLYSHOCK (intervensi sisi pasokan)
 
 ═══════════════════════════════════════════════
 SCHEMA OUTPUT (harus JSON valid, ikuti persis)

@@ -7,7 +7,8 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 from openai import AsyncOpenAI
-import google.generativeai as genai
+from google import genai
+from google.genai import types as genai_types
 from tqdm.asyncio import tqdm as atqdm
 
 from m0_setup import ROOT_DIR, get_cfg_and_logger
@@ -52,7 +53,7 @@ def load_articles(filepath: Path) -> list:
 
 async def extract_single_article_async(
     article: dict,
-    client,  # AsyncOpenAI or None
+    client,  # AsyncOpenAI or google.genai.Client
     cfg: dict,
     semaphore: asyncio.Semaphore,
     cache: dict,
@@ -63,6 +64,15 @@ async def extract_single_article_async(
     async with semaphore:  # Batasi concurrent requests
         prompt = build_prompt(article, "main")
 
+        system_instruction = (
+            "Kamu adalah analis senior ketahanan pangan Indonesia "
+            "yang menganalisis berita untuk model prediktif inflasi "
+            "pangan bergejolak di Medan, Sumatera Utara. "
+            "Berikan analisis Chain-of-Thought step-by-step, "
+            "lalu simpulkan dalam format JSON sesuai schema. "
+            "Kembalikan HANYA JSON valid tanpa teks tambahan."
+        )
+
         for attempt in range(cfg["llm"]["max_retries"]):
             try:
                 provider = cfg["llm"].get("provider", "openai")
@@ -70,33 +80,23 @@ async def extract_single_article_async(
                 completion_tokens = 0
                 
                 if provider == "gemini":
-                    model = genai.GenerativeModel(
-                        model_name=cfg["llm"]["model"],
-                        system_instruction=(
-                            "Kamu adalah analis senior ketahanan pangan Indonesia "
-                            "yang menganalisis berita untuk model prediktif inflasi "
-                            "pangan bergejolak di Medan, Sumatera Utara. "
-                            "Berikan analisis Chain-of-Thought step-by-step, "
-                            "lalu simpulkan dalam format JSON sesuai schema. "
-                            "Kembalikan HANYA JSON valid tanpa teks tambahan."
-                        )
+                    response = await client.aio.models.generate_content(
+                        model=cfg["llm"]["model"],
+                        contents=prompt,
+                        config=genai_types.GenerateContentConfig(
+                            system_instruction=system_instruction,
+                            max_output_tokens=cfg["llm"]["max_completion_tokens"],
+                            response_mime_type="application/json",
+                        ),
                     )
-                    generation_config = genai.types.GenerationConfig(
-                        max_output_tokens=cfg["llm"]["max_completion_tokens"],
-                        response_mime_type="application/json"
-                    )
-                    response = await model.generate_content_async(
-                        prompt,
-                        generation_config=generation_config
-                    )
-                    raw_output = response.text.strip()
+                    raw_output = response.text.strip() if response.text else ""
                     
                     if hasattr(response, 'usage_metadata') and response.usage_metadata:
-                        prompt_tokens = response.usage_metadata.prompt_token_count
-                        completion_tokens = response.usage_metadata.candidates_token_count
+                        prompt_tokens = response.usage_metadata.prompt_token_count or 0
+                        completion_tokens = response.usage_metadata.candidates_token_count or 0
 
                     if not raw_output:
-                        logger.warning(f"Empty GenAI response {article['article_id']} (attempt {attempt+1})")
+                        logger.warning(f"Empty Gemini response {article['article_id']} (attempt {attempt+1})")
                         if attempt < cfg["llm"]["max_retries"] - 1:
                             await asyncio.sleep(cfg["llm"]["retry_delay_sec"])
                         continue
@@ -108,14 +108,7 @@ async def extract_single_article_async(
                         messages=[
                             {
                                 "role": "system",
-                                "content": (
-                                    "Kamu adalah analis senior ketahanan pangan Indonesia "
-                                    "yang menganalisis berita untuk model prediktif inflasi "
-                                    "pangan bergejolak di Medan, Sumatera Utara. "
-                                    "Berikan analisis Chain-of-Thought step-by-step, "
-                                    "lalu simpulkan dalam format JSON sesuai schema. "
-                                    "Kembalikan HANYA JSON valid tanpa teks tambahan."
-                                ),
+                                "content": system_instruction,
                             },
                             {"role": "user", "content": prompt},
                         ],
@@ -135,7 +128,7 @@ async def extract_single_article_async(
 
                 json_str = raw_output
                 if "```json" in json_str:
-                    json_str = json_str.split("```json").split("```").strip()[1]
+                    json_str = json_str.split("```json")[1].split("```")[0].strip()
                 elif "```" in json_str:
                     json_str = json_str.split("```")[1].split("```")[0].strip()
 
@@ -275,7 +268,7 @@ async def run_extraction_pipeline_async(
 
     client = None
     if provider == "gemini":
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
     else:
         client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 

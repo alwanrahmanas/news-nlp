@@ -9,6 +9,9 @@ pyarrow                  # .parquet support
 # OpenAI
 openai>=1.30
 
+# Gemini
+google-genai
+
 # Scraping & HTML
 httpx
 beautifulsoup4
@@ -24,6 +27,7 @@ scikit-learn
 statsmodels>=0.14
 scipy
 krippendorff
+
 # Visualization
 matplotlib>=3.8
 seaborn

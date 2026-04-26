@@ -78,25 +78,39 @@ def rule_based_typeAB(text: str) -> tuple:
 
 def classify_typeAB_llm(article: dict, client, cfg: dict) -> dict:
     """
-    Use GPT-4o-mini to classify ambiguous articles.
+    Use LLM (OpenAI or Gemini) to classify ambiguous articles.
     """
     prompt = build_prompt(article, "typeab")
+    provider = cfg["llm"].get("provider", "openai")
 
     for attempt in range(cfg["llm"]["max_retries"]):
         try:
-            response = client.chat.completions.create(
-                model=cfg["llm"]["model"],
-                temperature=cfg["llm"]["temperature"],
-                max_tokens=150,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "Kamu analis temporal berita pangan. Kembalikan HANYA JSON valid."
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-            )
-            raw_output = response.choices[0].message.content.strip()
+            if provider == "gemini":
+                from google.genai import types as genai_types
+                response = client.models.generate_content(
+                    model=cfg["llm"]["model"],
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction="Kamu analis temporal berita pangan. Kembalikan HANYA JSON valid.",
+                        max_output_tokens=min(cfg["llm"]["max_completion_tokens"], 500),
+                        response_mime_type="application/json",
+                    ),
+                )
+                raw_output = (response.text or "").strip()
+            else:
+                response = client.chat.completions.create(
+                    model=cfg["llm"]["model"],
+                    max_completion_tokens=min(cfg["llm"]["max_completion_tokens"], 500),
+                    response_format={"type": "json_object"},
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Kamu analis temporal berita pangan. Kembalikan HANYA JSON valid."
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                )
+                raw_output = response.choices[0].message.content.strip()
 
             # Parse JSON
             json_str = raw_output
@@ -209,8 +223,13 @@ def run_typeAB_classification(cfg: dict = None, use_llm: bool = True) -> pd.Data
         logger.info(f"Running LLM classification for {len(ambiguous_indices)} ambiguous articles...")
 
         try:
-            from openai import OpenAI
-            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            provider = cfg["llm"].get("provider", "openai")
+            if provider == "gemini":
+                from google import genai
+                client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+            else:
+                from openai import OpenAI
+                client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
             from tqdm import tqdm
             for idx in tqdm(ambiguous_indices, desc="TypeAB LLM"):
