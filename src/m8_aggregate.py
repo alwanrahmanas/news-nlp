@@ -1,5 +1,5 @@
 """
-M8 — AGREGASI TIME-SERIES BI-MINGGUAN
+M8 - AGREGASI TIME-SERIES BI-MINGGUAN
 ========================================
 Input:  data/processed/typeAB_labels.parquet
 Output: data/processed/sentiment_features.csv
@@ -9,7 +9,7 @@ Features per biweekly period:
   - article counts
   - intensity measures
   - extreme news dummies
-  - no_relevant_news_t: dummy coverage (Metodologi §9.1)
+  - no_relevant_news_t: dummy coverage (Metodologi Section 9.1)
 """
 
 import logging
@@ -24,7 +24,7 @@ from m0_setup import ROOT_DIR, get_cfg_and_logger
 logger = logging.getLogger("nlp_pipeline.m8")
 
 
-# ── Biweekly Period Assignment ───────────────────────────────
+# 1. Biweekly Period Assignment 
 
 def assign_biweek_period(date: pd.Timestamp, anchor: pd.Timestamp) -> str:
     """
@@ -50,9 +50,9 @@ def get_biweek_date_range(period_id: str, anchor: pd.Timestamp) -> tuple:
     return start, end
 
 
-# ── Weighted Sentiment Index ─────────────────────────────────
+# 2. Weighted Sentiment Index 
 
-def weighted_sentiment_index(group: pd.DataFrame, lambda_decay: float = 0.3) -> float:
+def weighted_sentiment_index(group: pd.DataFrame, lambda_decay: float = 0.15) -> float:
     """
     Compute confidence-weighted sentiment index with exponential decay.
     More recent articles in the period get higher weights.
@@ -74,9 +74,9 @@ def weighted_sentiment_index(group: pd.DataFrame, lambda_decay: float = 0.3) -> 
     return (weights * group["sentiment_score"]).sum() / total_weight
 
 
-# ── Aggregation Functions ────────────────────────────────────
+# 3. Aggregation Functions 
 
-def compute_period_features(group: pd.DataFrame, lambda_decay: float = 0.3) -> dict:
+def compute_period_features(group: pd.DataFrame, lambda_decay: float = 0.15) -> dict:
     """Compute all features for a single biweekly period."""
 
     features = {}
@@ -123,15 +123,15 @@ def compute_period_features(group: pd.DataFrame, lambda_decay: float = 0.3) -> d
     extreme_mask = (group["label"] == "SUPPLYSHOCK") & (group["sentiment_score"] < -0.7)
     features["has_extreme_news"] = 1 if extreme_mask.any() else 0
 
-    # no_relevant_news_t: dummy coverage (Metodologi §9.1, Langkah C)
-    # Membedakan "sentimen netral karena tenang" vs "netral karena data hilang"
+    # no_relevant_news_t: dummy coverage (Metodologi Section 9.1, Langkah C)
+    # Membedakan sentimen netral karena tenang vs netral karena data hilang
     # Spike-slab akan memutuskan apakah dummy ini informatif
     features["no_relevant_news_t"] = 1 if len(relevant) == 0 else 0
 
     return features
 
 
-# ── Main Pipeline ────────────────────────────────────────────
+# 4. Main Pipeline 
 
 def run_aggregation(cfg: dict = None) -> pd.DataFrame:
     """Run the full aggregation pipeline."""
@@ -159,10 +159,15 @@ def run_aggregation(cfg: dict = None) -> pd.DataFrame:
 
     # Anchor date
     anchor = pd.Timestamp(cfg["aggregation"]["biweek_anchor"])
-    lambda_decay = cfg["aggregation"]["decay_lambda"]
+    
+    # Validation for lambda_decay
+    lambda_decay = cfg["aggregation"].get("decay_lambda", 0.15)
+    if lambda_decay > 0.2:
+        logger.warning(f"lambda_decay={lambda_decay} berisiko terlalu agresif. Artikel di awal periode 14 hari akan kehilangan signifikansi. Rekomendasi: 0.1 - 0.15.")
+        
     neutral_value = cfg["aggregation"]["neutral_impute_value"]
 
-    # Coverage quality thresholds (from config, with fallback defaults)
+    # Coverage quality thresholds
     agg_cfg = cfg["aggregation"]
     min_relevant  = agg_cfg.get("min_relevant_articles", 2)
     sparse_thresh = agg_cfg.get("sparse_threshold", 4)
@@ -192,7 +197,7 @@ def run_aggregation(cfg: dict = None) -> pd.DataFrame:
         if len(period_data) > 0:
             features = compute_period_features(period_data, lambda_decay)
         else:
-            # Empty period — all NaN (will be imputed later)
+            # Empty period (0 articles) - full NaN injection
             features = {
                 "sentiment_all": np.nan,
                 "sentiment_supply": np.nan,
@@ -208,25 +213,20 @@ def run_aggregation(cfg: dict = None) -> pd.DataFrame:
                 "max_neg_sentiment": 0.0,
                 "prop_negative_articles": 0.0,
                 "has_extreme_news": 0,
-                "no_relevant_news_t": 1,  # kosong = pasti no relevant news
+                "no_relevant_news_t": 1,
             }
 
-        # ── Coverage Flag per Period ──────────────────────────────────
-        # Dari total artikel, berapa yang relevan (non-IRRELEVANT)?
-        # Periode dengan n_relevant < min_relevant adalah "blank spot" meskipun
-        # ada artikel — karena semua artikelnya IRRELEVANT.
-        n_tot = features.get("n_articles_total", 0)
+        # COVERAGE FLAG LOGIC (Fixed: using n_relevant to represent actual economic signals)
         n_rel = features.get("n_relevant", 0)
 
-        if n_tot < sparse_thresh:
+        if n_rel < sparse_thresh:
             features["coverage_flag"] = "SPARSE"
-        elif n_tot >= dense_thresh:
+        elif n_rel >= dense_thresh:
             features["coverage_flag"] = "DENSE"
         else:
             features["coverage_flag"] = "NORMAL"
 
-        # low_confidence = periode kosong ATAU semua artikel irrelevant
-        # Ini adalah periode yang tidak memiliki sinyal ekonomi nyata
+        # low_confidence = lack of clear signal
         features["low_confidence_period"] = bool(n_rel < min_relevant)
 
         # Add period metadata
@@ -234,32 +234,31 @@ def run_aggregation(cfg: dict = None) -> pd.DataFrame:
         features["period_id"] = period_id
         features["date_start"] = start.strftime("%Y-%m-%d")
         features["date_end"] = end.strftime("%Y-%m-%d")
-        # is_historical = periode sebelum analysis_period_start (sparse bias tinggi)
         features["is_historical"] = bool(start < analysis_start)
 
         period_features.append(features)
 
     result_df = pd.DataFrame(period_features)
 
-    # Imputation: fill NaN sentiment values with neutral
-    # PENTING: Untuk low_confidence_period, impute ke neutral (0.0) bukan ke
-    # nilai sebelumnya (forward-fill) karena kita tidak punya sinyal valid.
-    # Forward-fill HANYA berlaku untuk periode NORMAL yang kebetulan missing.
+    # IMPUTATION LOGIC (Fixed: avoiding subset ffill that causes stale data leakages)
     sentiment_cols = [
         "sentiment_all", "sentiment_supply", "sentiment_demand",
         "sentiment_typeA", "sentiment_typeB",
     ]
+    
     for col in sentiment_cols:
-        # Untuk low-confidence: langsung neutral
+        # 1. Low-confidence: explicit restriction to neutral_value
         result_df.loc[result_df["low_confidence_period"], col] = \
             result_df.loc[result_df["low_confidence_period"], col].fillna(neutral_value)
-        # Untuk periode NORMAL yang NaN (e.g., tidak ada supply shock bulan itu):
-        # forward-fill lalu backward-fill sebagai fallback
-        result_df.loc[~result_df["low_confidence_period"], col] = \
-            result_df.loc[~result_df["low_confidence_period"], col] \
-            .ffill().bfill().fillna(neutral_value)
+            
+        # 2. Normal periods: ffill on the full dataframe limits carry-forward to strictly consecutive normal periods
+        # Fallback to neutral if no prior normal state exists.
+        result_df[col] = result_df[col].ffill().where(
+            ~result_df["low_confidence_period"],
+            result_df[col]
+        ).fillna(neutral_value)
 
-    # Mark imputed periods (benar-benar kosong = 0 artikel)
+    # Mark true imputed periods (0 actual articles)
     result_df["is_imputed"] = result_df["n_articles_total"] == 0
 
     n_imputed     = result_df["is_imputed"].sum()
@@ -268,8 +267,8 @@ def run_aggregation(cfg: dict = None) -> pd.DataFrame:
     pct_imputed   = n_imputed / len(result_df) * 100
     pct_low_conf  = n_low_conf / len(result_df) * 100
 
-    logger.info(f"Imputed periods (0 artikel)     : {n_imputed}/{len(result_df)} ({pct_imputed:.1f}%)")
-    logger.info(f"Low-confidence periods          : {n_low_conf}/{len(result_df)} ({pct_low_conf:.1f}%)")
+    logger.info(f"Imputed periods (0 artikel)    : {n_imputed}/{len(result_df)} ({pct_imputed:.1f}%)")
+    logger.info(f"Low-confidence periods         : {n_low_conf}/{len(result_df)} ({pct_low_conf:.1f}%)")
     logger.info(f"Historical periods (pre-{analysis_start.year}): {n_historical}")
 
     flag_counts = result_df["coverage_flag"].value_counts()
@@ -326,8 +325,8 @@ def run_aggregation(cfg: dict = None) -> pd.DataFrame:
     logger.info(f"  Analysis period start  : {analysis_start.date()}")
     logger.info(f"  Analytic periods total : {len(analytic_df)}")
     logger.info(f"  Analytic low-conf      : {analytic_lc} ({analytic_lc/max(len(analytic_df),1)*100:.1f}%)")
-    logger.info("  → Gunakan is_historical=False untuk training/evaluation")
-    logger.info("  → Gunakan low_confidence_period=False untuk periode dengan sinyal kuat")
+    logger.info("  -> Gunakan is_historical=False untuk training/evaluation")
+    logger.info("  -> Gunakan low_confidence_period=False untuk periode dengan sinyal kuat")
 
     return result_df
 
