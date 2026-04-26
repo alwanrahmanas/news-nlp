@@ -144,7 +144,7 @@ def select_optimal_lag(y: np.ndarray, x: np.ndarray, max_lag: int = 4,
 
         optimal_lag = ic_values.get(ic, results.aic)
         logger.info(f"Optimal lag ({ic}): {optimal_lag}")
-        return max(1, optimal_lag)
+        return max(1, min(optimal_lag, max_lag))
 
     except Exception as e:
         logger.warning(f"VAR lag selection failed: {e}. Using default lag=2.")
@@ -210,10 +210,10 @@ def cross_correlation_plot(inflation: pd.Series, predictor: pd.Series,
     ccf_values = []
 
     for lag in lags:
-        if lag <= 0:
-            shifted = predictor.shift(-lag)
-        else:
-            shifted = predictor.shift(-lag)
+        # CCF(lag) = corr(inflation_t, predictor_{t-lag})
+        # Positive lag = predictor leads (shifted forward in time)
+        # Negative lag = inflation leads
+        shifted = predictor.shift(lag)
 
         valid = pd.concat([inflation, shifted], axis=1).dropna()
         if len(valid) > 2:
@@ -356,8 +356,14 @@ def run_granger_tests(cfg: dict = None) -> dict:
             test_predictor = predictor.iloc[-min_len:].reset_index(drop=True)
         else:
             transformations[col] = "none"
-            test_inflation = inflation_series.reset_index(drop=True)
-            test_predictor = predictor.reset_index(drop=True)
+            # Align: if inflation was first-differenced (starts from period 2),
+            # drop the first observation of the predictor to match
+            if transformations.get("vf_inflation", "none") != "none":
+                test_inflation = inflation_series.reset_index(drop=True)
+                test_predictor = predictor.iloc[1:].reset_index(drop=True)
+            else:
+                test_inflation = inflation_series.reset_index(drop=True)
+                test_predictor = predictor.reset_index(drop=True)
 
         logger.info(f"\nGranger test: {desc}")
         result = granger_test_pair(
@@ -411,23 +417,28 @@ def run_granger_tests(cfg: dict = None) -> dict:
 
         if typeA_sig and not typeB_sig:
             interpretation = (
-                "Tipe A Granger-causes inflasi VF (p<0.05), "
-                "konfirmasi nilai prediktif konten supply-driven forward-looking. "
-                "Tipe B tidak signifikan, validasi dekomposisi A/B."
+                "Tipe A Granger-causes inflasi VF (p<0.05), konfirmasi nilai prediktif "
+                "konten supply-driven. Tipe B tidak signifikan — dekomposisi A/B tervalidasi."
             )
         elif typeA_sig and typeB_sig:
             interpretation = (
-                "Kedua Tipe A dan Tipe B signifikan. "
-                "Tipe A tetap lebih kuat, tapi Tipe B juga mengandung informasi prediktif."
+                "Kedua Tipe A dan B signifikan. Tipe A tetap kandidat utama prediktor "
+                "forward-looking, tapi Tipe B juga mengandung informasi prediktif."
             )
-        elif not typeA_sig:
+        elif not typeA_sig and typeB_sig:
             interpretation = (
-                "Tipe A tidak signifikan. "
-                "Pertimbangkan subgroup analysis (non-Ramadan) atau lag berbeda. "
-                "Ini tetap kontribusi valid (null finding) untuk paper."
+                "Tipe A tidak signifikan sebagai prediktor independen. "
+                "Tipe B (price-driven) justru Granger-causes inflasi VF — konsisten dengan "
+                "hipotesis media attention effect: liputan harga intensif mendorong ekspektasi "
+                "inflasi dan perilaku hoarding, bukan mencerminkan supply shock yang mendasarinya. "
+                "Berlawanan dengan Kwon et al. (2025) di pasar AS yang lebih efisien."
             )
-        else:
-            interpretation = "Hasil campuran. Perlu analisis lebih lanjut."
+        elif not typeA_sig and not typeB_sig:
+            interpretation = (
+                "Tipe A dan B keduanya tidak signifikan. Null finding yang valid — "
+                "nilai prediktif marginal sentimen berita tidak terbukti untuk konteks ini. "
+                "Rekomendasikan BSTS tanpa komponen sentimen (Model M2 saja)."
+            )
 
         final_results["interpretation"] = interpretation
 
