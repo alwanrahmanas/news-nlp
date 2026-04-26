@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from datetime import datetime, timezone
 
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, RateLimitError
 from google import genai
 from google.genai import types as genai_types
 from tqdm.asyncio import tqdm as atqdm
@@ -187,6 +187,11 @@ async def extract_single_article_async(
                 if attempt < cfg["llm"]["max_retries"] - 1:
                     await asyncio.sleep(cfg["llm"]["retry_delay_sec"])
 
+            except RateLimitError as e:
+                logger.warning(f"Rate limit hit for {article['article_id']} attempt {attempt+1}: {e}")
+                # Wait longer for rate limits
+                await asyncio.sleep(cfg["llm"]["retry_delay_sec"] * (attempt + 2))
+
             except Exception as e:
                 logger.error(f"Error {article['article_id']} attempt {attempt+1}: {e}")
                 await asyncio.sleep(cfg["llm"]["retry_delay_sec"] * (attempt + 1))
@@ -247,8 +252,8 @@ async def run_extraction_pipeline_async(
         cost_output = (len(to_process) * 300 / 1_000_000) * 0.30
         total_cost = cost_input + cost_output
     else:
-        cost_input  = (estimated_tokens / 1_000_000) * 0.150
-        cost_output = (len(to_process) * 300 / 1_000_000) * 0.600
+        cost_input  = (estimated_tokens / 1_000_000) * 0.75
+        cost_output = (len(to_process) * 300 / 1_000_000) * 4.50
         total_cost = cost_input + cost_output
         
     logger.info(f"Estimated cost ({cfg['llm']['model']}): ${total_cost:.4f}")
@@ -289,8 +294,8 @@ async def run_extraction_pipeline_async(
     total_prompt     = sum(r.get("tokens_prompt", 0) for r in results)
     total_completion = sum(r.get("tokens_completion", 0) for r in results)
 
-    rate_in = 0.075 if provider == "gemini" else 0.15
-    rate_out = 0.30 if provider == "gemini" else 0.60
+    rate_in = 0.075 if provider == "gemini" else 0.75
+    rate_out = 0.30 if provider == "gemini" else 4.50
     
     cost_log = {
         "run_date": datetime.now(timezone.utc).isoformat(),

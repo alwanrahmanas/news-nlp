@@ -173,8 +173,9 @@ llm:
   # temperature dihapus: GPT-5-mini lebih stabil tanpa temperature override
   # gunakan max_completion_tokens (bukan max_tokens) sesuai API GPT-5
   max_completion_tokens: 10000
-  max_retries: 3
-  retry_delay_sec: 5
+  max_retries: 5
+  retry_delay_sec: 10
+  max_concurrent: 5
   batch_size: 20
   cache_enabled: true
 
